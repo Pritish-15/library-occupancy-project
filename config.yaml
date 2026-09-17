@@ -106,9 +106,6 @@ api:
   host: 127.0.0.1
   port: 8097
 
-frontend:
-  port: 8533
-
 vision:
   max_upload_mb: 40
   max_frames: 180

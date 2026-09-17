@@ -1,4 +1,4 @@
-"""Reusable Plotly/matplotlib helpers for EDA notebooks and the dashboard."""
+"""Reusable Plotly helpers for EDA notebooks."""
 
 from __future__ import annotations
 

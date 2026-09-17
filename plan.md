@@ -35,7 +35,7 @@ todos:
     content: Assemble reproducible sklearn Pipeline + train/predict entrypoints; serialize artifacts to models/
   - id: app
     status: completed
-    content: Build FastAPI backend and 6-page Streamlit dashboard; run on an uncommon port
+    content: Build FastAPI backend and custom web UI; run on an uncommon port
   - id: docs-tests
     status: completed
     content: 'Add docs templates (literature matrix, dataset feasibility, paper outline) and pytest tests'
@@ -43,14 +43,14 @@ todos:
     status: completed
     content: 'Generate data, train pipeline, launch dashboard, and emit a Preview card'
 name: Smart Library Intelligence
-overview: 'Build the Smart Library Occupancy & Resource Intelligence System from the roadmap as a runnable, end-to-end Python project: synthetic-but-realistic data, a reproducible scikit-learn pipeline, forecasting + peak-classification models with time-aware evaluation, SHAP explainability, a resource-recommendation layer, and a FastAPI + Streamlit interface.'
+overview: 'Build the Smart Library Occupancy & Resource Intelligence System from the roadmap as a runnable, end-to-end Python project: synthetic-but-realistic data, a reproducible scikit-learn pipeline, forecasting + peak-classification models with time-aware evaluation, SHAP explainability, a resource-recommendation layer, and a FastAPI + custom web UI.'
 isProject: false
 ---
 # Smart Library Occupancy & Resource Intelligence System
 
 ## Direction and key decisions
 
-- Stack (per the Project 06 / roadmap spec): Python 3.11, pandas/numpy, scikit-learn, XGBoost, statsmodels (SARIMA), SHAP, FastAPI, Streamlit, joblib, pytest.
+- Stack (per the Project 06 / roadmap spec): Python 3.11, pandas/numpy, scikit-learn, XGBoost, statsmodels (SARIMA), SHAP, FastAPI, custom HTML/CSS/JS UI, joblib, pytest.
 - Data strategy: ship a realistic synthetic generator that mimics the roadmap's "ideal dataset" schema, hidden behind a swappable loader so real datasets can replace it later. Everything downstream runs unchanged on real data.
 - Scope of this first iteration: build the full engineering spine of the roadmap (Phases 3-16) so the system is demonstrable end-to-end. Academic-writing phases (1, 2, 17) become structured `docs/` templates you fill in.
 - Time-series discipline: strictly chronological train/validation/test split, lag features computed without leakage, no random shuffling.
@@ -68,7 +68,7 @@ smart-library-intelligence/
     evaluation/         # metrics.py, splits.py, error_analysis.py, ablation.py
     pipeline/           # build_pipeline.py, train.py, predict.py, recommend.py, explain.py
     config.py
-  app/{api,frontend}/   # FastAPI + Streamlit
+  app/{api,web}/        # FastAPI + static UI
   models/               # serialized artifacts (.joblib)
   tests/  docs/
   requirements.txt  README.md  LICENSE  config.yaml
@@ -114,9 +114,9 @@ smart-library-intelligence/
 ### 11. Reproducible pipeline + training entrypoint (Phase 14)
 - `pipeline/build_pipeline.py` assembles preprocessing + model into one serializable `Pipeline`. `train.py` trains and writes `models/*.joblib` + metrics JSON. `predict.py` loads artifacts for inference.
 
-### 12. Application: FastAPI + Streamlit (Phases 15, 16)
-- `app/api`: FastAPI endpoints for current status, multi-horizon forecast (1h/3h/6h), explanation, and recommendation, loading the serialized pipeline.
-- `app/frontend`: Streamlit dashboard with the 6 pages (Overview, Forecast, Analytics, Resources, Explainability, Model Performance), bound to an uncommon port. This is the previewable surface.
+### 12. Application: FastAPI + custom web UI (Phases 15, 16)
+- `app/api`: FastAPI endpoints for current status, multi-horizon forecast (1h/3h/6h), explanation, recommendation, calendar, and demo video detection, loading the serialized pipeline.
+- `app/web`: HTML/CSS/JS dashboard (Overview, Forecast, Analytics, Resources, Explainability, Model Performance, Academic Calendar, Video detection). This is the previewable surface.
 - README documents how to generate data, train, and run both services locally.
 
 ### 13. Docs templates + tests (Phases 1, 2, 17, testing)
@@ -124,7 +124,7 @@ smart-library-intelligence/
 - `tests/`: pytest coverage for validation, lag correctness (no leakage), metrics, and the recommendation layer.
 
 ## Runnable outcome
-After implementation I'll generate the synthetic data, train the pipeline, launch the Streamlit dashboard (and FastAPI) on an uncommon port, and emit a Preview card so you can click through the six pages immediately. Real data can later replace the generator via the single `load_raw()` seam.
+After implementation I'll generate the synthetic data, train the pipeline, launch the FastAPI app (UI + API) on an uncommon port, and emit a Preview card so you can click through the pages immediately. Real data can later replace the generator via the single `load_raw()` seam.
 
 ## Out of scope for this iteration
 - Writing actual literature-review/paper prose (templates only).
