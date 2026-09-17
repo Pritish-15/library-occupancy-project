@@ -1,0 +1,109 @@
+project:
+  name: Smart Library Occupancy & Resource Intelligence
+  seed: 42
+
+paths:
+  raw_data: data/raw/occupancy.csv
+  processed_data: data/processed/occupancy.csv
+  models_dir: models
+  metrics_path: models/metrics.json
+  ablation_path: models/ablation.json
+  best_params_path: models/best_params.json
+  shap_path: models/shap_summary.json
+  error_analysis_path: models/error_analysis.json
+
+generation:
+  start: "2024-08-01"
+  end: "2026-01-31"
+  freq: "h"
+  outlier_rate: 0.004
+  missing_gap_rate: 0.0015
+  noise_scale: 0.06
+
+libraries:
+  - id: lib_central
+    name: Central Library
+    zones:
+      - {id: z_quiet, name: Quiet Study, capacity: 140}
+      - {id: z_collab, name: Collaborative, capacity: 90}
+      - {id: z_computing, name: Computing Lab, capacity: 60}
+  - id: lib_science
+    name: Science Library
+    zones:
+      - {id: z_stacks, name: Stacks Reading, capacity: 110}
+      - {id: z_group, name: Group Study, capacity: 70}
+      - {id: z_media, name: Media Commons, capacity: 40}
+  - id: lib_east
+    name: East Campus Library
+    zones:
+      - {id: z_main, name: Main Hall, capacity: 160}
+      - {id: z_rooms, name: Study Rooms, capacity: 48}
+      - {id: z_late, name: Late-Night Wing, capacity: 80}
+
+semester:
+  fall_start_month: 8
+  fall_start_day: 26
+  spring_start_month: 1
+  spring_start_day: 13
+  weeks: 16
+
+exam_windows:
+  - {start: "2024-12-09", end: "2024-12-20"}
+  - {start: "2025-05-05", end: "2025-05-16"}
+  - {start: "2025-12-08", end: "2025-12-19"}
+
+holidays:
+  - "2024-09-02"
+  - "2024-11-28"
+  - "2024-11-29"
+  - "2024-12-24"
+  - "2024-12-25"
+  - "2025-01-01"
+  - "2025-01-20"
+  - "2025-05-26"
+  - "2025-07-04"
+  - "2025-09-01"
+  - "2025-11-27"
+  - "2025-11-28"
+  - "2025-12-24"
+  - "2025-12-25"
+  - "2026-01-01"
+
+academic_events:
+  - {start: "2024-10-14", end: "2024-10-18", name: midterms}
+  - {start: "2025-03-10", end: "2025-03-14", name: midterms}
+  - {start: "2025-10-13", end: "2025-10-17", name: midterms}
+
+utilization_thresholds:
+  low: 0.40
+  moderate: 0.70
+  high: 0.90
+  # critical is above high
+
+recommendation:
+  near_capacity: 0.85
+  prefer_same_library: true
+  top_k: 5
+
+splits:
+  train: 0.70
+  val: 0.15
+  test: 0.15
+
+lags: [1, 2, 3, 6, 24, 168]
+
+model:
+  target: occupied_seats
+  random_state: 42
+  n_estimators: 80
+  max_depth: 6
+  n_iter_search: 6
+  shap_sample_size: 200
+  cv_splits: 3
+
+api:
+  host: 127.0.0.1
+  port: 8097
+
+frontend:
+  port: 8533
