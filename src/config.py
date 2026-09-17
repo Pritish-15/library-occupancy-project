@@ -38,3 +38,5 @@ def ensure_dirs() -> None:
     project_path("notebooks").mkdir(parents=True, exist_ok=True)
     project_path("docs").mkdir(parents=True, exist_ok=True)
     project_path("tests").mkdir(parents=True, exist_ok=True)
+    calendar_file = ROOT / cfg["paths"].get("academic_calendar", "data/calendar/academic_calendar.json")
+    calendar_file.parent.mkdir(parents=True, exist_ok=True)

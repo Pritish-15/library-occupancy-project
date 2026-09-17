@@ -1,0 +1,90 @@
+{
+  "timezone": "Asia/Kolkata",
+  "updated_at": null,
+  "updated_by": "seed",
+  "notes": "Official dates belong here so library admins can replace them each term without a code change. ETE/ETP batch-wise schedules from the Division of Examination can be added as extra exam windows.",
+  "terms": [
+    {
+      "id": "2024-25-autumn-demo",
+      "session": "2024-25",
+      "name": "Autumn Term (synthetic history)",
+      "programmes": "Demo coverage for generated occupancy history",
+      "classes_start": "2024-08-26",
+      "classes_end": "2024-12-20",
+      "next_term_start": "2025-01-13",
+      "notes": "Used only until real historical calendars are loaded."
+    },
+    {
+      "id": "2024-25-spring-demo",
+      "session": "2024-25",
+      "name": "Spring Term (synthetic history)",
+      "programmes": "Demo coverage for generated occupancy history",
+      "classes_start": "2025-01-13",
+      "classes_end": "2025-05-16",
+      "next_term_start": "2025-08-26",
+      "notes": "Used only until real historical calendars are loaded."
+    },
+    {
+      "id": "2025-26-autumn-demo",
+      "session": "2025-26",
+      "name": "Autumn Term (synthetic history)",
+      "programmes": "Demo coverage for generated occupancy history",
+      "classes_start": "2025-08-26",
+      "classes_end": "2025-12-19",
+      "next_term_start": "2026-01-13",
+      "notes": "Used only until real historical calendars are loaded."
+    },
+    {
+      "id": "2026-27-autumn",
+      "session": "2026-27",
+      "name": "Autumn Term (Term-I)",
+      "programmes": "All full-time programmes except B.Pharm, M.Pharm, BPT, MPT, MBA, Education, Physical Education, Agriculture, Law, LSAD, and School of Design (Interior and Product Design)",
+      "classes_start": "2026-07-27",
+      "classes_end": "2026-12-11",
+      "next_term_start": "2027-01-11",
+      "notes": "ETE dates are tentative and may vary. Capstone/Dissertation/Project ETEs follow separate guidelines. Examinations may be held on Sunday. Sports/cultural schedules are notified separately."
+    },
+    {
+      "id": "2026-27-spring",
+      "session": "2026-27",
+      "name": "Spring Term (Term-II)",
+      "programmes": "Same audience as Autumn Term-I unless the university publishes a different calendar",
+      "classes_start": "2027-01-11",
+      "classes_end": null,
+      "next_term_start": null,
+      "notes": "Classes commence 11 Jan 2027. Add close-of-term, MTT, and ETE dates when the Spring calendar is published."
+    }
+  ],
+  "exam_windows": [
+    {"start": "2024-12-09", "end": "2024-12-20", "name": "ETE (demo 2024)", "term_id": "2024-25-autumn-demo"},
+    {"start": "2025-05-05", "end": "2025-05-16", "name": "ETE (demo 2025 spring)", "term_id": "2024-25-spring-demo"},
+    {"start": "2025-12-08", "end": "2025-12-19", "name": "ETE (demo 2025 autumn)", "term_id": "2025-26-autumn-demo"},
+    {"start": "2026-12-14", "end": "2026-12-30", "name": "End Term Examination (ETE)", "term_id": "2026-27-autumn"}
+  ],
+  "academic_events": [
+    {"start": "2024-10-14", "end": "2024-10-18", "name": "Midterms (demo)", "term_id": "2024-25-autumn-demo"},
+    {"start": "2025-03-10", "end": "2025-03-14", "name": "Midterms (demo)", "term_id": "2024-25-spring-demo"},
+    {"start": "2025-10-13", "end": "2025-10-17", "name": "Midterms (demo)", "term_id": "2025-26-autumn-demo"},
+    {"start": "2026-08-29", "end": "2026-08-29", "name": "Last date for Reappear Examination application", "term_id": "2026-27-autumn"},
+    {"start": "2026-09-05", "end": "2026-09-05", "name": "Start of Reappear Examination (and onwards; batch-wise dates TBA)", "term_id": "2026-27-autumn"},
+    {"start": "2026-10-01", "end": "2026-10-09", "name": "Mid Term Test (MTT)", "term_id": "2026-27-autumn"},
+    {"start": "2026-11-14", "end": "2026-11-14", "name": "Advance registration for Spring electives/minors closes", "term_id": "2026-27-autumn"},
+    {"start": "2026-12-28", "end": "2026-12-29", "name": "Annual Conference (Share the Vision) for Faculty and Staff", "term_id": "2026-27-autumn"}
+  ],
+  "closures": [
+    {"start": "2024-09-02", "end": "2024-09-02", "name": "Holiday (demo)"},
+    {"start": "2024-11-28", "end": "2024-11-29", "name": "Holiday (demo)"},
+    {"start": "2024-12-24", "end": "2024-12-25", "name": "Holiday (demo)"},
+    {"start": "2025-01-01", "end": "2025-01-01", "name": "Holiday (demo)"},
+    {"start": "2025-01-20", "end": "2025-01-20", "name": "Holiday (demo)"},
+    {"start": "2025-05-26", "end": "2025-05-26", "name": "Holiday (demo)"},
+    {"start": "2025-07-04", "end": "2025-07-04", "name": "Holiday (demo)"},
+    {"start": "2025-09-01", "end": "2025-09-01", "name": "Holiday (demo)"},
+    {"start": "2025-11-27", "end": "2025-11-28", "name": "Holiday (demo)"},
+    {"start": "2025-12-24", "end": "2025-12-25", "name": "Holiday (demo)"},
+    {"start": "2026-01-01", "end": "2026-01-01", "name": "Holiday (demo)"},
+    {"start": "2026-11-07", "end": "2026-11-10", "name": "Term Break for Students", "term_id": "2026-27-autumn"},
+    {"start": "2026-12-13", "end": "2026-12-13", "name": "Preparatory leave for ETE", "term_id": "2026-27-autumn"},
+    {"start": "2026-12-31", "end": "2027-01-10", "name": "Winter Vacation for students", "term_id": "2026-27-autumn"}
+  ]
+}

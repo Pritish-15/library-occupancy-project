@@ -34,6 +34,11 @@ Swap in a real CSV with the same schema by replacing `data/raw/occupancy.csv` (o
 4. Resources — alternatives when a zone is near capacity  
 5. Explainability — global SHAP and per-location contributions  
 6. Model Performance — baselines, ablation A–D, classification, error breakdowns  
+7. Academic Calendar — admins publish term, exam, event, and closure dates (token-gated)
+
+Academic dates live in `data/calendar/academic_calendar.json`. Update them from the dashboard or `PUT /calendar` with header `X-Admin-Token`. Set `LIBRARY_ADMIN_TOKEN` in the environment (or `admin.token` in `config.yaml`) before production. Retrain after material calendar changes.
+
+The YAML `exam_windows` / `holidays` blocks in `config.yaml` are legacy fallbacks only if the JSON file is missing.
 
 ## Tests
 

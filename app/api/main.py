@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+import secrets
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -9,9 +10,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.calendar.store import admin_token, load_calendar, save_calendar
 from src.config import load_config, project_path
 from src.data.clean import clean_occupancy
 from src.data.load import load_raw
@@ -166,6 +168,28 @@ def recommend(library_id: str, zone_id: str, horizon: int = 1):
     merged["predicted_utilization"] = merged["predicted_utilization_fc"].fillna(merged["predicted_utilization"])
     recs = recommend_alternatives(merged, library_id, zone_id)
     return {"library_id": library_id, "zone_id": zone_id, "horizon": horizon, "recommendations": recs}
+
+
+def _require_admin(x_admin_token: str | None) -> None:
+    expected = admin_token()
+    if not expected or not x_admin_token or not secrets.compare_digest(x_admin_token, expected):
+        raise HTTPException(401, "Admin token required")
+
+
+@app.get("/calendar")
+def get_calendar():
+    return load_calendar()
+
+
+@app.put("/calendar")
+def put_calendar(payload: dict, x_admin_token: str | None = Header(default=None)):
+    _require_admin(x_admin_token)
+    try:
+        saved = save_calendar(payload, updated_by="api")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    _frame.cache_clear()
+    return saved
 
 
 @app.get("/metrics")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import os
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -14,6 +15,7 @@ import streamlit as st
 import httpx
 
 from src.config import load_config, project_path
+from src.calendar.store import calendar_mtime, load_calendar
 from src.data.clean import clean_occupancy
 from src.data.load import load_raw
 from src.features.transformers import prepare_frame
@@ -35,8 +37,23 @@ API = f"http://{cfg['api']['host']}:{cfg['api']['port']}"
 
 
 @st.cache_data(show_spinner=False)
-def load_frame() -> pd.DataFrame:
+def load_frame(_calendar_mtime: float) -> pd.DataFrame:
     return prepare_frame(clean_occupancy(load_raw()))
+
+
+def api_put(path: str, payload: dict, token: str):
+    try:
+        r = httpx.put(
+            f"{API}{path}",
+            json=payload,
+            headers={"X-Admin-Token": token},
+            timeout=30.0,
+        )
+        if r.status_code >= 400:
+            return {"error": r.text}
+        return r.json()
+    except Exception as exc:
+        return {"error": str(exc)}
 
 
 def api_get(path: str, params: dict | None = None):
@@ -67,14 +84,27 @@ st.markdown(
 
 page = st.sidebar.radio(
     "Pages",
-    ["Overview", "Forecast", "Analytics", "Resources", "Explainability", "Model Performance"],
+    [
+        "Overview",
+        "Forecast",
+        "Analytics",
+        "Resources",
+        "Explainability",
+        "Model Performance",
+        "Academic Calendar",
+    ],
 )
 st.sidebar.caption("Smart Library Occupancy & Resource Intelligence")
 st.sidebar.code(f"API {API}", language=None)
 
-frame = load_frame()
-libs = sorted(frame["library_id"].unique())
-lib_names = frame.drop_duplicates("library_id").set_index("library_id")["library_name"].to_dict()
+if page != "Academic Calendar":
+    frame = load_frame(calendar_mtime())
+    libs = sorted(frame["library_id"].unique())
+    lib_names = frame.drop_duplicates("library_id").set_index("library_id")["library_name"].to_dict()
+else:
+    frame = None
+    libs = []
+    lib_names = {}
 
 if page == "Overview":
     st.title("Library occupancy overview")
@@ -178,6 +208,100 @@ elif page == "Explainability":
         st.plotly_chart(fig, use_container_width=True)
     elif expl.get("error"):
         st.info("Local explanation needs a trained tree model and a running API.")
+
+elif page == "Academic Calendar":
+    st.title("Academic calendar")
+    st.caption(
+        "Library admins update terms, exams, events, and closures here. "
+        "The occupancy model reads this file — dates are not hardcoded. "
+        "After a major calendar change, retrain with `python -m src.pipeline.train`."
+    )
+    if "admin_ok" not in st.session_state:
+        st.session_state.admin_ok = False
+    if not st.session_state.admin_ok:
+        token = st.text_input("Admin token", type="password", help="Set LIBRARY_ADMIN_TOKEN or config.yaml admin.token")
+        if st.button("Unlock editor"):
+            expected = os.environ.get("LIBRARY_ADMIN_TOKEN") or (cfg.get("admin", {}).get("token") or "")
+            if token and expected and token == expected:
+                st.session_state.admin_ok = True
+                st.session_state.admin_token = token
+                st.rerun()
+            else:
+                st.error("Incorrect token.")
+        cal_view = api_get("/calendar")
+        if "terms" in cal_view:
+            st.subheader("Currently published (read-only)")
+            st.dataframe(pd.DataFrame(cal_view["terms"]), use_container_width=True, hide_index=True)
+    else:
+        cal = api_get("/calendar")
+        if "error" in cal and "terms" not in cal:
+            cal = load_calendar()
+            st.warning("API unavailable — editing the local calendar file.")
+        st.text_area("Notes", value=cal.get("notes") or "", key="cal_notes")
+        st.subheader("Terms")
+        terms_df = st.data_editor(
+            pd.DataFrame(cal.get("terms") or []),
+            num_rows="dynamic",
+            use_container_width=True,
+            key="terms_editor",
+        )
+        st.subheader("Exam windows (ETE / reappear blocks)")
+        exams_df = st.data_editor(
+            pd.DataFrame(cal.get("exam_windows") or []),
+            num_rows="dynamic",
+            use_container_width=True,
+            key="exams_editor",
+        )
+        st.subheader("Academic events (MTT, registration deadlines, conferences)")
+        events_df = st.data_editor(
+            pd.DataFrame(cal.get("academic_events") or []),
+            num_rows="dynamic",
+            use_container_width=True,
+            key="events_editor",
+        )
+        st.subheader("Closures and breaks (term break, preparatory leave, vacations, holidays)")
+        closures_df = st.data_editor(
+            pd.DataFrame(cal.get("closures") or []),
+            num_rows="dynamic",
+            use_container_width=True,
+            key="closures_editor",
+        )
+        who = st.text_input("Your name / office", value="library-admin")
+        if st.button("Save calendar", type="primary"):
+            payload = {
+                "timezone": cal.get("timezone") or "Asia/Kolkata",
+                "notes": st.session_state.get("cal_notes") or "",
+                "terms": terms_df.fillna("").to_dict(orient="records"),
+                "exam_windows": exams_df.fillna("").to_dict(orient="records"),
+                "academic_events": events_df.fillna("").to_dict(orient="records"),
+                "closures": closures_df.fillna("").to_dict(orient="records"),
+            }
+            for table in ("terms", "exam_windows", "academic_events", "closures"):
+                cleaned = []
+                for row in payload[table]:
+                    row = {k: (None if v == "" else v) for k, v in row.items()}
+                    if table == "terms" and not (row.get("id") or row.get("name")):
+                        continue
+                    if table != "terms" and not row.get("start"):
+                        continue
+                    cleaned.append(row)
+                payload[table] = cleaned
+            result = api_put("/calendar", payload, st.session_state.get("admin_token") or "")
+            if "error" in result:
+                from src.calendar.store import save_calendar as _save
+
+                try:
+                    _save(payload, updated_by=who)
+                    st.success("Saved locally (API rejected the token or is down). Reload occupancy after retraining.")
+                    st.cache_data.clear()
+                except Exception as exc:
+                    st.error(str(exc) if "error" not in result else result["error"])
+            else:
+                st.success(f"Calendar published. Last update {result.get('updated_at')}. Retrain models when exam/term dates change.")
+                st.cache_data.clear()
+        if st.button("Lock editor"):
+            st.session_state.admin_ok = False
+            st.rerun()
 
 else:
     st.title("Model performance")

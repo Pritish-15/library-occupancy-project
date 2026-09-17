@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from src.calendar.store import active_term_for, load_calendar, semester_week
 from src.config import ensure_dirs, load_config, data_path
 
 
@@ -29,26 +30,12 @@ def _in_windows(ts: pd.Timestamp, windows: list[dict]) -> bool:
     return False
 
 
-def _semester_week(ts: pd.Timestamp, cfg: dict) -> int:
-    year = ts.year
-    month = ts.month
-    sem = cfg["semester"]
-    if month >= sem["fall_start_month"]:
-        start = pd.Timestamp(year=year, month=sem["fall_start_month"], day=sem["fall_start_day"])
-    elif month <= 6:
-        start = pd.Timestamp(year=year, month=sem["spring_start_month"], day=sem["spring_start_day"])
-    else:
-        start = pd.Timestamp(year=year, month=sem["fall_start_month"], day=sem["fall_start_day"])
-    week = int((ts.normalize() - start).days // 7) + 1
-    return int(np.clip(week, 0, sem["weeks"] + 4))
-
-
 def generate_occupancy(cfg: dict | None = None) -> pd.DataFrame:
     cfg = cfg or load_config()
+    calendar = load_calendar()
     rng = np.random.default_rng(cfg["project"]["seed"])
     gen = cfg["generation"]
     index = pd.date_range(gen["start"], gen["end"], freq=gen["freq"])
-    holidays = {pd.Timestamp(h) for h in cfg["holidays"]}
 
     rows: list[dict] = []
     for lib in cfg["libraries"]:
@@ -62,16 +49,25 @@ def generate_occupancy(cfg: dict | None = None) -> pd.DataFrame:
                 base = HOUR_PROFILE[hour] * WEEKDAY_MULT[ts.weekday()]
                 if hour >= 20:
                     base *= late_boost
-                sem_week = _semester_week(ts, cfg)
-                if 1 <= sem_week <= cfg["semester"]["weeks"]:
+                sem_week = semester_week(ts, calendar=calendar, cfg=cfg)
+                term = active_term_for(ts, calendar.get("terms") or [])
+                if term:
                     ramp = 0.75 + 0.25 * min(sem_week / 6, 1.0)
-                    if sem_week >= cfg["semester"]["weeks"] - 1:
-                        ramp *= 0.55
+                    if term.get("classes_end") and term.get("classes_start"):
+                        span = max(
+                            1,
+                            int(
+                                (pd.Timestamp(term["classes_end"]) - pd.Timestamp(term["classes_start"])).days // 7
+                            )
+                            + 1,
+                        )
+                        if sem_week >= span - 1:
+                            ramp *= 0.55
                 else:
                     ramp = 0.35
-                exam = _in_windows(ts, cfg["exam_windows"])
-                event = _in_windows(ts, cfg["academic_events"])
-                holiday = ts.normalize() in holidays
+                exam = _in_windows(ts, calendar.get("exam_windows") or [])
+                event = _in_windows(ts, calendar.get("academic_events") or [])
+                holiday = _in_windows(ts, calendar.get("closures") or [])
                 mult = lib_bias * zone_bias * ramp
                 if exam:
                     mult *= 1.55
