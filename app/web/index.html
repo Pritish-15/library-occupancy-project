@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stacks — Library Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/app.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <aside class="rail">
+    <div class="brand">
+      <span class="mark">▣</span>
+      <div>
+        <strong>Stacks</strong>
+        <small>Library intelligence</small>
+      </div>
+    </div>
+    <nav id="nav">
+      <button data-page="overview" class="active">Overview</button>
+      <button data-page="forecast">Forecast</button>
+      <button data-page="analytics">Analytics</button>
+      <button data-page="resources">Resources</button>
+      <button data-page="explain">Explainability</button>
+      <button data-page="performance">Model performance</button>
+      <button data-page="calendar">Academic calendar</button>
+      <button data-page="video">Video detection</button>
+    </nav>
+    <p class="rail-note">Demo UI · counts, not identities</p>
+  </aside>
+  <main>
+    <header class="top">
+      <div>
+        <p class="kicker" id="kicker">Campus occupancy</p>
+        <h1 id="title">Overview</h1>
+      </div>
+      <p class="as-of" id="asOf"></p>
+    </header>
+    <section id="view" class="view"></section>
+  </main>
+  <script src="js/app.js"></script>
+</body>
+</html>

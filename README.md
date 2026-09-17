@@ -1,6 +1,6 @@
 # Smart Library Occupancy & Resource Intelligence
 
-End-to-end occupancy forecasting for academic libraries: synthetic-but-realistic hourly data, a leakage-safe scikit-learn pipeline, peak classification, SHAP explanations, rule-based resource recommendations, and a FastAPI + Streamlit interface.
+End-to-end occupancy forecasting for academic libraries: synthetic-but-realistic hourly data, a leakage-safe scikit-learn pipeline, peak classification, SHAP explanations, rule-based resource recommendations, and a FastAPI web UI.
 
 ## Setup
 
@@ -17,11 +17,10 @@ pip install -r requirements.txt
 ```bash
 python -m src.data.generate
 python -m src.pipeline.train
-uvicorn app.api.main:app --host 127.0.0.1 --port 8097
-streamlit run app/frontend/dashboard.py --server.port 8533
+python -m uvicorn app.api.main:app --host 127.0.0.1 --port 8097
 ```
 
-Dashboard: [http://127.0.0.1:8533](http://127.0.0.1:8533)  
+App: [http://127.0.0.1:8097](http://127.0.0.1:8097)  
 API docs: [http://127.0.0.1:8097/docs](http://127.0.0.1:8097/docs)
 
 Swap in a real CSV with the same schema by replacing `data/raw/occupancy.csv` (or the path in `config.yaml`). All downstream steps go through `src.data.load.load_raw()`.
@@ -30,22 +29,19 @@ Swap in a real CSV with the same schema by replacing `data/raw/occupancy.csv` (o
 
 1. Overview — latest occupancy and utilization by library/zone  
 2. Forecast — 1h / 3h / 6h recursive forecasts  
-3. Analytics — temporal, academic, distribution, correlation, missingness  
+3. Analytics — hour, weekday, exam vs normal, daily trend  
 4. Resources — alternatives when a zone is near capacity  
 5. Explainability — global SHAP and per-location contributions  
-6. Model Performance — baselines, ablation A–D, classification, error breakdowns  
-7. Academic Calendar — admins publish term, exam, event, and closure dates (token-gated)
+6. Model performance — baselines, ablation A–D, classification  
+7. Academic calendar — publish term/exam/closure dates (token to save)  
+8. Video detection — **demo**: upload a short library clip, overlay person boxes, clutter grid, and estimated empty seats  
 
-Academic dates live in `data/calendar/academic_calendar.json`. Update them from the dashboard or `PUT /calendar` with header `X-Admin-Token`. Set `LIBRARY_ADMIN_TOKEN` in the environment (or `admin.token` in `config.yaml`) before production. Retrain after material calendar changes.
+The video page uses a pretrained YOLOv8 *person* detector for demonstration and testing. It is not live CCTV and does not identify students. Seat counts are estimated from people vs the selected zone capacity, not a calibrated chair map.
 
-The YAML `exam_windows` / `holidays` blocks in `config.yaml` are legacy fallbacks only if the JSON file is missing.
+Academic dates live in `data/calendar/academic_calendar.json`. Saving uses `PUT /calendar` with `X-Admin-Token`. Set `LIBRARY_ADMIN_TOKEN` (or `admin.token` in `config.yaml`). Retrain after material calendar changes.
 
 ## Tests
 
 ```bash
 pytest -q
 ```
-
-## Layout
-
-See `plan.md` for the research roadmap. Academic writing lives as templates under `docs/`.

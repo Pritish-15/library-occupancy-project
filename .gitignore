@@ -20,4 +20,6 @@ data/processed/*.csv
 Thumbs.db
 *.log
 .coverage
-htmlcov/
+data/uploads/
+models/*.pt
+yolov8*.pt

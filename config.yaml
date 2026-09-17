@@ -109,5 +109,8 @@ api:
 frontend:
   port: 8533
 
-admin:
-  token: change-me-library-admin
+vision:
+  max_upload_mb: 40
+  max_frames: 180
+  stride: 2
+  conf: 0.35

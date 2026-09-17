@@ -12,7 +12,9 @@ if str(ROOT) not in sys.path:
 import pandas as pd
 from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
+from app.api.demo import router as demo_router
 from src.calendar.store import admin_token, load_calendar, save_calendar
 from src.config import load_config, project_path
 from src.data.clean import clean_occupancy
@@ -41,9 +43,64 @@ def _latest_snapshot(frame: pd.DataFrame) -> pd.DataFrame:
     return frame[frame["timestamp"] == ts].copy()
 
 
+app.include_router(demo_router)
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/libraries")
+def libraries():
+    cfg = load_config()
+    return {"libraries": cfg["libraries"]}
+
+
+@app.get("/analytics")
+def analytics():
+    frame = _frame()
+    by_hour = frame.groupby("hour")["occupied_seats"].mean().round(2)
+    by_wd = frame.groupby("weekday")["occupied_seats"].mean().round(2)
+    names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    exam = frame.groupby("is_exam_period")["occupied_seats"].mean()
+    daily = (
+        frame.assign(date=frame["timestamp"].dt.date)
+        .groupby("date")["occupied_seats"]
+        .mean()
+        .tail(60)
+    )
+    return {
+        "by_hour": {str(k): float(v) for k, v in by_hour.items()},
+        "by_weekday": {names[int(k)]: float(v) for k, v in by_wd.items()},
+        "exam_vs_normal": {
+            "exam": float(exam.get(1, 0)),
+            "normal": float(exam.get(0, 0)),
+        },
+        "daily": [{"date": str(k), "occupied_seats": float(v)} for k, v in daily.items()],
+    }
+
+
+@app.get("/ablation")
+def ablation():
+    cfg = load_config()
+    path = project_path(cfg["paths"]["ablation_path"])
+    if not path.exists():
+        raise HTTPException(503, "Train first")
+    import json
+
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+@app.get("/shap")
+def shap_summary():
+    cfg = load_config()
+    path = project_path(cfg["paths"]["shap_path"])
+    if not path.exists():
+        raise HTTPException(503, "Train first")
+    import json
+
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 @app.get("/status")
@@ -201,3 +258,8 @@ def metrics():
     import json
 
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+WEB_DIR = ROOT / "app" / "web"
+if WEB_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(WEB_DIR), html=True), name="web")
