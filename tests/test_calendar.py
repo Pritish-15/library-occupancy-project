@@ -41,6 +41,14 @@ def test_calendar_features_flag_ete_and_winter_break():
     assert out.loc[2, "is_in_semester"] == 0
 
 
+def test_calendar_features_explicit_calendar_matches_default():
+    df = pd.DataFrame({"timestamp": ["2026-10-05 10:00:00", "2026-12-20 10:00:00"]})
+    pd.testing.assert_frame_equal(
+        add_calendar_features(df),
+        add_calendar_features(df, calendar=load_calendar()),
+    )
+
+
 def test_save_calendar_roundtrip(tmp_path: Path):
     path = tmp_path / "cal.json"
     payload = {

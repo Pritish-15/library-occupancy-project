@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api.demo import router as demo_router
+from app.api.sim import router as sim_router
 from src.calendar.store import admin_token, load_calendar, save_calendar
 from src.config import load_config, project_path
 from src.data.clean import clean_occupancy
@@ -44,6 +45,7 @@ def _latest_snapshot(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 app.include_router(demo_router)
+app.include_router(sim_router)
 
 
 @app.get("/health")
@@ -255,6 +257,16 @@ def metrics():
     path = project_path(cfg["paths"]["metrics_path"])
     if not path.exists():
         raise HTTPException(503, "Train first to produce metrics")
+    import json
+
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+@app.get("/resources/metrics")
+def resource_metrics():
+    path = project_path("models", "resource_metrics.json")
+    if not path.exists():
+        raise HTTPException(503, "Resource metrics missing. Run python -m src.pipeline.train_resources")
     import json
 
     return json.loads(path.read_text(encoding="utf-8"))

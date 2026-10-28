@@ -20,9 +20,14 @@ def _flag_windows(ts: pd.Series, windows: list[dict]) -> pd.Series:
     return flag.astype(int)
 
 
-def add_calendar_features(df: pd.DataFrame, cfg: dict | None = None, ts_col: str = "timestamp") -> pd.DataFrame:
+def add_calendar_features(
+    df: pd.DataFrame,
+    cfg: dict | None = None,
+    ts_col: str = "timestamp",
+    calendar: dict | None = None,
+) -> pd.DataFrame:
     cfg = cfg or load_config()
-    calendar = load_calendar()
+    calendar = calendar if calendar is not None else load_calendar()
     out = df.copy()
     ts = pd.to_datetime(out[ts_col])
     out["semester_week"] = ts.map(lambda t: semester_week(t, calendar=calendar, cfg=cfg))

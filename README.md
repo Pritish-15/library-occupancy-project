@@ -23,6 +23,7 @@ This repository is an end-to-end **research + engineering prototype**. Occupancy
 13. [Academic calendar](#13-academic-calendar)
 14. [How to swap in real college data](#14-how-to-swap-in-real-college-data)
 15. [Future requirements](#15-future-requirements)
+16. [Virtual simulation mode (digital twin)](#16-virtual-simulation-mode-digital-twin)
 
 ---
 
@@ -38,7 +39,7 @@ This system is meant to:
 | Demand forecasting | Recursive 1h / 3h / 6h forecasts per library/zone |
 | Peak-hour detection | Utilization bins Low / Moderate / High / Critical + XGBoost classifier |
 | Seat availability | `capacity − occupied` (tabular) and `capacity − people_detected` (video demo) |
-| Resource demand | Columns exist (`book_demand`, PCs, rooms, charging) as **features**; they are **not** yet separate forecast targets |
+| Resource demand | Separate XGBoost forecasts for books, PCs, rooms, and charging; these synthetic targets are derived from occupancy |
 | Alternative recommendation | Rule layer: if a zone is near capacity, rank other zones by remaining seats |
 | Occupancy dashboard | FastAPI static UI in `app/web` |
 | ML pipeline | `python -m src.pipeline.train` writes `models/*.joblib` |
@@ -54,12 +55,15 @@ This system is meant to:
 - Leakage-safe lags, chronological split, ablation A–D, time-series CV, SHAP
 - FastAPI UI: overview, forecast, analytics, resources, explainability, metrics, calendar editor, video demo
 - Editable academic calendar JSON (2026–27 Autumn Term seeded)
+- Browser-stepped digital twin with scenario shocks, forecasts, alerts, recommendations, comparison, and CSV export
+- Separate leakage-safe resource regressors and holdout metrics (synthetic targets only)
 
 **Not production-ready**
 
 - No live sensors; API caches the **entire** history in memory (`_frame`)
 - No authentication on most routes (calendar save uses a shared admin token)
-- Resource demand is not its own model
+- Occupancy and resource model scores reflect generated data, not campus performance
+- Simulation is a deterministic presentation aid, not a sensor feed or operational digital twin
 - Video seats are **not** a calibrated chair map
 - CORS is open (`*`)
 
@@ -92,6 +96,7 @@ pip install -r requirements.txt
 
 python -m src.data.generate
 python -m src.pipeline.train
+python -m src.pipeline.train_resources
 python -m uvicorn app.api.main:app --host 127.0.0.1 --port 8097
 ```
 
@@ -382,6 +387,13 @@ Static files from `app/web` are **mounted last** so API routes win.
 | GET | `/status` | no | Latest occupancy + model scores |
 | GET | `/forecast?horizon=&library_id=&zone_id=` | no | 1, 3, 6 (also 12, 24) hour forecast |
 | GET | `/recommend?library_id=&zone_id=&horizon=` | no | Alternatives if near capacity |
+| GET/POST | `/sim/state`, `/sim/start`, `/sim/step`, `/sim/reset` | no | In-memory simulated clock and occupancy |
+| POST/DELETE | `/sim/scenario`, `/sim/scenario/{id}` | no | Add/cancel runtime-only scenario overlays |
+| POST | `/sim/recommender` | no | Enable redirects and set compliance |
+| GET | `/sim/forecast?horizon=` `/sim/recommend?...` | no | Simulation-context occupancy forecasts/recommendations |
+| GET | `/sim/resources?horizon=` `/resources/metrics` | no | Resource forecasts/recommendations and holdout scores |
+| GET | `/sim/compare?days=&compliance=` | no | Paired recommender on/off comparison |
+| GET | `/sim/export.csv` | no | Download simulated history in raw CSV schema |
 | GET | `/explain?library_id=&zone_id=` | no | SHAP for latest row |
 | GET | `/analytics` | no | Hour/weekday/exam/daily aggregates |
 | GET | `/metrics` `/ablation` `/shap` | no | Training JSON |
@@ -402,6 +414,7 @@ Static files from `app/web` are **mounted last** so API routes win.
 | Page | Behavior |
 | --- | --- |
 | Overview | `/status` metrics and table |
+| Live simulation | Browser-driven clock, zones, scenarios, forecasts, resources, redirects, comparison, CSV export |
 | Forecast | Library/zone/horizon → `/forecast` |
 | Analytics | `/analytics` charts |
 | Resources | `/recommend` |
@@ -458,7 +471,7 @@ These are the gaps between the official project outcome (“deployed system for 
 
 - Live hourly ingest (gates, Wi-Fi estimates, seat sensors) instead of a static CSV and `_frame` cache  
 - Per-zone camera homography / seat polygons if video counts must match real chairs  
-- Separate time series and models for **book demand**, **PC usage**, and **study rooms**  
+- Retrain occupancy and resource models on independently collected real campus data before operational use
 - Handling of closed rooms and exam seating layouts  
 
 ### Models
@@ -493,6 +506,59 @@ These are the gaps between the official project outcome (“deployed system for 
 - Complete literature matrix, feasibility report, and paper from the `docs/` templates using **real** holdout metrics, not synthetic ones  
 
 ---
+
+## 16. Virtual simulation mode (digital twin)
+
+This mode exists because the workspace has no live library sensor feed. It advances a simulated clock and generates hourly zone occupancy from the same synthetic demand pattern used by the dataset generator, then sends the resulting rolling history to the saved occupancy model. The simulator does not modify `data/raw/occupancy.csv`, the persisted academic calendar, or the existing API history cache.
+
+```text
+config.yaml + academic_calendar.json
+        │
+        ▼
+SimulationEngine ── seeded latent demand + in-memory scenarios
+        │             rolling per-zone history + recommender redirects
+        ├── occupancy model → next-hour / recursive occupancy forecasts
+        ├── resource models  → books / computer / room / charging forecasts
+        ├── recommendations → alternatives and overflow counters
+        ▼
+/sim API ── browser-driven clock ── Chart.js simulation dashboard
+```
+
+### Run the demo
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m src.pipeline.train
+python -m src.pipeline.train_resources
+python -m uvicorn app.api.main:app --host 127.0.0.1 --port 8097
+```
+
+Open `http://127.0.0.1:8097`, choose **Live simulation**, then use **Normal week**, **Midterm**, **Exam week**, or **Pre-term break**. To verify the simulator before presenting, run `python -m src.sim.selftest`. Resource training is separate; it does not modify `src.pipeline.train` or its saved occupancy inputs.
+
+### Simulation API
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /sim/state` | Current clock, occupancy, forecast, events, scenarios, counters, and live MAE |
+| `POST /sim/start` | Start at a preset or explicit timestamp; optional seed |
+| `POST /sim/step` | Advance 1–48 simulated hours |
+| `POST /sim/reset` | Restore configured start and seed |
+| `POST /sim/scenario` / `DELETE /sim/scenario/{id}` | Add or cancel a runtime scenario |
+| `POST /sim/recommender` | Toggle redirects and set compliance from 0 to 1 |
+| `GET /sim/forecast?horizon=3` | Recursive occupancy forecasts for every zone |
+| `GET /sim/recommend?library_id=&zone_id=&horizon=1` | Seat alternatives for the requested forecast horizon |
+| `GET /sim/resources?horizon=3` | Recursive resource predictions and resource alternatives |
+| `GET /resources/metrics` | Resource model holdout metrics against naive baselines |
+| `GET /sim/compare?days=14&compliance=0.4` | Paired simulation with recommender enabled and disabled |
+| `GET /sim/export.csv` | Download history matching the raw occupancy schema |
+
+Scenario kinds: `exam_surge` applies the 1.55 exam multiplier and exam feature flag (5 days by default); `holiday` applies the 0.18 closure multiplier and holiday flag; `event_spike` applies the 1.18 event multiplier and event flag (2 days by default); `zone_closure` sets one zone's served occupancy to zero and redistributes demand first within its library; `random_spike` multiplies one zone's latent demand by 1.3–1.8 for 3–6 hours. All windows remain in memory. The paired comparison runs the same exam surge, six-hour Central Library quiet-zone spike, and zone closure in both modes to make overflow/redirect effects observable. Presets start on 2026-09-14, 2026-10-01, 2026-12-10, and 2026-11-03 respectively.
+
+### Limits and real-data boundary
+
+Every simulated count, scenario response, recommendation, accuracy number, and comparison result is **synthetic and calibrated to the generator**, not evidence of real campus performance. The four resource columns in the source dataset are generated from occupancy with fixed ratios and noise; high resource-model accuracy therefore reflects that generator relationship, not real book circulation, PC availability, charging demand, or study-room behavior. Book recommendations are advisory only because no catalog/inventory data exists. The comparison is a controlled demo and not a causal evaluation.
+
+The single ingestion swap point is `src/data/load.py:load_raw()`: provide a real CSV with the existing raw schema (or replace this function with a real source), then retrain occupancy and resource models. Real libraries, zone capacities, stable location IDs, and a published academic calendar must also replace the demo configuration before any operational use. The simulator itself never appends simulated rows to the raw CSV.
 
 ## License
 
