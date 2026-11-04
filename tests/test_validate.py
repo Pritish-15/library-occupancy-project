@@ -47,3 +47,19 @@ def test_clean_fills_missing_and_clips_capacity():
     assert cleaned["occupied_seats"].isna().sum() == 0
     assert (cleaned["occupied_seats"] <= cleaned["total_capacity"]).all()
     assert (cleaned["available_seats"] == cleaned["total_capacity"] - cleaned["occupied_seats"]).all()
+
+
+def test_clean_fill_does_not_use_future_values():
+    # A gap must be filled from the past (40), not interpolated toward the future (80).
+    df = pd.DataFrame(
+        dict(
+            timestamp=[f"2025-01-01 {h}:00:00" for h in (10, 11, 12)],
+            library_id=["lib_central"] * 3,
+            zone_id=["z_quiet"] * 3,
+            total_capacity=[100] * 3,
+            occupied_seats=[40.0, None, 80.0],
+            available_seats=[60.0, None, 20.0],
+        )
+    )
+    cleaned = clean_occupancy(df).sort_values("timestamp")
+    assert cleaned["occupied_seats"].tolist() == [40, 40, 80]

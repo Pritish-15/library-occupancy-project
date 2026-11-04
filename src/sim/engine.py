@@ -14,7 +14,7 @@ import pandas as pd
 from src.calendar.store import load_calendar
 from src.config import load_config, project_path
 from src.features.calendar import add_calendar_features
-from src.features.lags import add_lag_features
+from src.features.lags import add_lag_features, add_resource_lags
 from src.features.temporal import add_temporal_features
 from src.features.transformers import occupancy_level
 from src.pipeline.predict import artifact_dir
@@ -284,6 +284,7 @@ class SimulationEngine:
         out = add_temporal_features(df_buffer)
         out = add_calendar_features(out, cfg=self.cfg, calendar=self.calendar_overlay.calendar())
         out = add_lag_features(out, lags=self.cfg["lags"])
+        out = add_resource_lags(out)
         out["library_code"] = out["library_id"].map(self.library_codes).astype(int)
         out["zone_code"] = out["zone_id"].map(self.zone_codes).astype(int)
         out["utilization"] = out["occupied_seats"] / out["total_capacity"]
@@ -345,6 +346,8 @@ class SimulationEngine:
                     rows.loc[index, f"lag_{lag}"] = (
                         float(history.iloc[-lag]) if len(history) >= lag else float(history.iloc[-1])
                     )
+                for resource in RESOURCE_COLUMNS:
+                    rows.loc[index, f"{resource}_lag_1"] = float(working[key][resource].iloc[-1])
             rows["library_code"] = rows["library_id"].map(self.library_codes).astype(int)
             rows["zone_code"] = rows["zone_id"].map(self.zone_codes).astype(int)
             rows["utilization"] = rows["occupied_seats"] / rows["total_capacity"]

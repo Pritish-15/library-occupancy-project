@@ -7,7 +7,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 from src.config import load_config
 from src.features.calendar import add_calendar_features
-from src.features.lags import add_lag_features
+from src.features.lags import RESOURCE_LAG_COLUMNS, add_lag_features, add_resource_lags
 from src.features.temporal import add_temporal_features
 
 
@@ -57,10 +57,13 @@ FEATURE_SETS = {
         "lag_1", "lag_2", "lag_3", "lag_6", "lag_24", "lag_168", "total_capacity",
         "hour", "day", "weekday", "is_weekend", "month",
         "semester_week", "is_exam_period", "is_holiday", "is_academic_event", "is_in_semester",
-        "computer_usage", "study_room_usage", "book_demand", "charging_station_usage",
-        "library_code", "zone_code",
+        # Resource usage is measured in the same hour as the target, so only
+        # its previous-hour value is a legitimate predictor.
+        "computer_usage_lag_1", "study_room_usage_lag_1", "book_demand_lag_1", "charging_station_usage_lag_1",
     ],
 }
+
+RESOURCE_COLS = ("computer_usage", "study_room_usage", "book_demand", "charging_station_usage")
 
 
 def encode_locations(df: pd.DataFrame) -> pd.DataFrame:
@@ -82,9 +85,14 @@ def prepare_frame(df: pd.DataFrame, cfg: dict | None = None) -> pd.DataFrame:
     out = add_temporal_features(df)
     out = add_calendar_features(out, cfg=cfg)
     out = add_lag_features(out, lags=cfg["lags"])
+    for col in RESOURCE_COLS:
+        if col in out.columns:
+            out[f"{col}_lag_1"] = out.groupby(["library_id", "zone_id"], sort=False)[col].shift(1)
+    out = add_resource_lags(out)
     out = encode_locations(out)
     out["utilization"] = out["occupied_seats"] / out["total_capacity"]
     out["occupancy_level"] = occupancy_level(out["utilization"], cfg["utilization_thresholds"])
     lag_cols = [f"lag_{k}" for k in cfg["lags"]]
+    lag_cols += [c for c in RESOURCE_LAG_COLUMNS if c in out.columns]
     out = out.dropna(subset=lag_cols)
     return out.reset_index(drop=True)
