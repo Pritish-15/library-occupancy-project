@@ -165,6 +165,10 @@ def _recursive_forecast(horizon: int, library_id: str | None, zone_id: str | Non
             feat = last[cols].copy()
             for lag in lags:
                 feat[f"lag_{lag}"] = history[-lag] if len(history) >= lag else history[-1]
+            for resource in ("computer_usage", "study_room_usage", "book_demand", "charging_station_usage"):
+                col = f"{resource}_lag_1"
+                if col in feat.index:
+                    feat[col] = last[resource]
             pred = float(model.predict(pd.DataFrame([feat]))[0])
             pred = max(0.0, min(pred, float(last["total_capacity"])))
             history.append(pred)

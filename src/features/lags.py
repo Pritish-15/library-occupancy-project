@@ -19,3 +19,21 @@ def add_lag_features(
     for lag in cfg_lags:
         out[f"lag_{lag}"] = grouped.shift(lag)
     return out
+
+
+
+RESOURCE_COLUMNS = ("computer_usage", "study_room_usage", "book_demand", "charging_station_usage")
+RESOURCE_LAG_COLUMNS = [f"{resource}_lag_1" for resource in RESOURCE_COLUMNS]
+
+
+def add_resource_lags(
+    df: pd.DataFrame,
+    group_cols: tuple[str, ...] = ("library_id", "zone_id"),
+) -> pd.DataFrame:
+    """Previous-hour resource usage per zone (same-hour values leak the target)."""
+    out = df.sort_values([*group_cols, "timestamp"]).copy()
+    grouped = out.groupby(list(group_cols), sort=False)
+    for resource in RESOURCE_COLUMNS:
+        if resource in out.columns:
+            out[f"{resource}_lag_1"] = grouped[resource].shift(1)
+    return out

@@ -291,7 +291,8 @@ JSON is the live calendar. Admins update it without editing Python.
 | `calendar.add_calendar_features` | Exam / event / closure flags + semester week from the JSON store |
 | `lags.add_lag_features` | `groupby(library_id, zone_id).shift(k)` so lags never mix zones or look ahead |
 | `TemporalFeatures`, `CalendarFeatures`, `LagFeatures` | sklearn `TransformerMixin` wrappers for Pipeline composition |
-| `FEATURE_SETS` | Ablation A history → B + time → C + academic → D + resources + location codes |
+| `lags.add_resource_lags` | Previous-hour (`_lag_1`) resource usage per zone; same-hour resource values are generated from occupancy and would leak the target |
+| `FEATURE_SETS` | Ablation A history → B + time → C + academic → D + previous-hour resource usage (D scores about the same as C: resources add no predictive value beyond the calendar) |
 | `encode_locations` | Integer codes for library/zone |
 | `occupancy_level` | Utilization → Low/Moderate/High/Critical |
 | `prepare_frame` | Full feature table used by train, API, and notebooks |

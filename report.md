@@ -610,8 +610,7 @@ C = ["lag_1", "lag_2", "lag_3", "lag_6", "lag_24", "lag_168", "total_capacity",
 D = ["lag_1", "lag_2", "lag_3", "lag_6", "lag_24", "lag_168", "total_capacity",
      "hour", "day", "weekday", "is_weekend", "month",
      "semester_week", "is_exam_period", "is_holiday", "is_academic_event", "is_in_semester",
-     "computer_usage", "study_room_usage", "book_demand", "charging_station_usage",
-     "library_code", "zone_code"]
+     "computer_usage_lag_1", "study_room_usage_lag_1", "book_demand_lag_1", "charging_station_usage_lag_1"]
 ```
 
 `add_lag_features` sorts by group columns plus timestamp, groups by `(library_id, zone_id)`, and applies `shift(lag)` to `occupied_seats`. `prepare_frame` drops rows missing **any** configured lag. With current maximum lag 168, 168 initial rows per series are omitted (1,512 total across nine series in a continuous dataset).
@@ -636,12 +635,10 @@ is_exam_period
 is_holiday
 is_academic_event
 is_in_semester
-computer_usage
-study_room_usage
-book_demand
-charging_station_usage
-library_code
-zone_code
+computer_usage_lag_1
+study_room_usage_lag_1
+book_demand_lag_1
+charging_station_usage_lag_1
 ```
 
 The metadata additionally contains `best_regressor: "xgboost_tuned"`, `target: "occupied_seats"`, `levels: ["Low", "Moderate", "High", "Critical"]`, and integer-to-level mapping `{0: "Low", 1: "Moderate", 2: "High", 3: "Critical"}`.
@@ -723,28 +720,98 @@ From `models/metrics.json`:
 ```json
 {
   "baselines": {
-    "historical_mean": {"mae": 11.992138748444297, "rmse": 16.787439723446393, "r2": 0.5420008092854991, "mape": 177.50567788046513},
-    "previous_interval": {"mae": 6.855284923849181, "rmse": 9.748845383426962, "r2": 0.8455449390916305, "mape": 107.84192181360501},
-    "same_time_prev_day": {"mae": 9.410586960241858, "rmse": 14.484138126190683, "r2": 0.6590575375592467, "mape": 129.55600641919213},
-    "same_time_prev_week": {"mae": 9.72089441560664, "rmse": 15.275368700610558, "r2": 0.6207905241506191, "mape": 145.4446824473274}
+    "historical_mean": {
+      "mae": 14.021653261894961,
+      "rmse": 19.111788276715657,
+      "r2": 0.4065085697488402,
+      "mape": 216.11767070836163
+    },
+    "previous_interval": {
+      "mae": 6.65449774684844,
+      "rmse": 9.609125442456591,
+      "r2": 0.8499695102373463,
+      "mape": 113.042957803222
+    },
+    "same_time_prev_day": {
+      "mae": 9.198961839028007,
+      "rmse": 14.832433508848819,
+      "r2": 0.6425324519186624,
+      "mape": 139.09971924926555
+    },
+    "same_time_prev_week": {
+      "mae": 9.077006445724717,
+      "rmse": 15.978400442558545,
+      "r2": 0.5851621228352417,
+      "mape": 166.33974228826455
+    }
   },
   "regression": {
-    "linear": {"mae": 3.3732024741243234, "rmse": 4.606158048409945, "r2": 0.9655195083957736, "mape": 64.91054894101642},
-    "random_forest": {"mae": 3.823870485341323, "rmse": 5.207116906117551, "r2": 0.955935338889329, "mape": 69.85768229424774},
-    "xgboost": {"mae": 2.6289622657052867, "rmse": 3.7963045466768506, "r2": 0.97657832943709, "mape": 47.53886484047721},
-    "xgboost_tuned": {"mae": 2.5513211786895593, "rmse": 3.717654910265699, "r2": 0.977538749767335, "mape": 45.77456154967272}
+    "linear": {
+      "mae": 5.763659127789761,
+      "rmse": 8.126807018126078,
+      "r2": 0.8926871583681886,
+      "mape": 120.4567251527112
+    },
+    "random_forest": {
+      "mae": 5.415802346167005,
+      "rmse": 7.738688442434858,
+      "r2": 0.9026924527040114,
+      "mape": 114.81323784366228
+    },
+    "xgboost": {
+      "mae": 4.5249893930119365,
+      "rmse": 6.538861203660994,
+      "r2": 0.930527002243282,
+      "mape": 91.67467340219282
+    },
+    "xgboost_tuned": {
+      "mae": 4.42877708053903,
+      "rmse": 6.44998106100901,
+      "r2": 0.9324028042102042,
+      "mape": 88.42164091172098
+    }
   },
   "best_regressor": "xgboost_tuned",
   "classification": {
-    "precision_macro": 0.8556376515550328,
-    "recall_macro": 0.8234814408134361,
-    "f1_macro": 0.8365424894818387,
-    "precision_weighted": 0.9470916010019981,
-    "recall_weighted": 0.9470651987907136,
-    "f1_weighted": 0.94671764005472
+    "precision_macro": 0.7906051794803938,
+    "recall_macro": 0.7157444804143638,
+    "f1_macro": 0.7385962836684259,
+    "precision_weighted": 0.9256780676110488,
+    "recall_weighted": 0.9274998573954709,
+    "f1_weighted": 0.9247253143362755
   },
-  "confusion_matrix": [[12687, 174, 0, 0], [232, 2611, 238, 0], [10, 138, 1165, 43], [6, 7, 80, 140]],
-  "levels": ["Low", "Moderate", "High", "Critical"],
+  "confusion_matrix": [
+    [
+      13778,
+      156,
+      2,
+      0
+    ],
+    [
+      322,
+      1229,
+      300,
+      0
+    ],
+    [
+      13,
+      176,
+      1094,
+      58
+    ],
+    [
+      8,
+      65,
+      171,
+      159
+    ]
+  ],
+  "levels": [
+    "Low",
+    "Moderate",
+    "High",
+    "Critical"
+  ],
   "n_train": 81805,
   "n_val": 17529,
   "n_test": 17531,
@@ -756,14 +823,14 @@ From `models/metrics.json`:
 }
 ```
 
-From `models/ablation.json` (each `features` list is precisely the corresponding A–D list above):
+From `models/ablation.json` (each `features` list is precisely the corresponding A–D list above). Set D uses only the **previous-hour** (`_lag_1`) resource values: same-hour resource usage is generated from the target (`occupied_seats`) and leaked it, so an earlier version of set D (MAE 2.63) was invalid. With the leak removed, D (MAE 4.525) performs the same as C (MAE 4.507), i.e. resource usage adds no predictive value beyond the calendar features. Missing-value filling in `clean.py` is also causal (forward-fill only; no interpolation).
 
 | Set | `n_features` | MAE | RMSE | R² | MAPE |
 |---|---:|---:|---:|---:|---:|
-| A | 7 | 5.444288157415801 | 7.6271606606430025 | 0.9054587005810519 | 109.01485706421752 |
-| B | 12 | 4.649948102828832 | 6.538234374252594 | 0.930526888982176 | 92.26502399285928 |
-| C | 17 | 4.4345195410512535 | 6.228810763057147 | 0.9369469568948522 | 85.058701379003 |
-| D | 23 | 2.6289622657052867 | 3.7963045466768506 | 0.97657832943709 | 47.53886484047721 |
+| A | 7 | 5.304465825725939 | 7.501249686188469 | 0.9085720368973342 | 116.96204590781478 |
+| B | 12 | 4.717095073627655 | 6.686532203026387 | 0.9273536694870469 | 103.02669028756102 |
+| C | 17 | 4.506815504765294 | 6.521415362508839 | 0.930897219014336 | 91.04605909353258 |
+| D | 21 | 4.5249893930119365 | 6.538861203660994 | 0.930527002243282 | 91.67467340219282 |
 
 From `models/best_params.json`:
 
@@ -776,7 +843,7 @@ From `models/best_params.json`:
     "learning_rate": 0.08,
     "colsample_bytree": 0.9
   },
-  "cv_mae": 2.584967931111654
+  "cv_mae": 4.4737826983133955
 }
 ```
 

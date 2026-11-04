@@ -26,7 +26,10 @@ def clean_occupancy(df: pd.DataFrame) -> pd.DataFrame:
     for col in NUMERIC_FILL:
         if col not in df.columns:
             continue
-        df[col] = df.groupby(group_cols)[col].transform(lambda s: s.interpolate(limit_direction="both"))
+        # Causal fill: carry the last observed value forward only. Interpolation
+        # or a general backfill would use *future* readings (and, because cleaning
+        # runs before the split, test-period data) to fill earlier gaps.
+        # The backfill only touches leading NaNs at the very start of a series.
         df[col] = df.groupby(group_cols)[col].transform(lambda s: s.ffill().bfill())
         df[col] = df[col].fillna(0)
 
